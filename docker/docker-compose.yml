@@ -1,0 +1,39 @@
+services:
+  checkmate:
+    image: ghcr.io/ksankaran/checkmate:latest
+    ports:
+      - "8000:8000"
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-changeme-replace-in-production}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  playwright-http:
+    image: ghcr.io/ksankaran/playwright-http:latest
+    ports:
+      - "8932:8932"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8932/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  checkmate-mcp:
+    image: ghcr.io/joshmullikin/checkmate-mcp:latest
+    ports:
+      - "3003:3003"
+    environment:
+      CHECKMATE_URL: http://checkmate:8000
+      PORT: 3003
+    depends_on:
+      checkmate:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3003/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 12

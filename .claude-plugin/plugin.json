@@ -1,0 +1,20 @@
+{
+  "name": "checkmate-bdd",
+  "description": "BDD scenario authoring and E2E testing via checkmate + playwright-http + checkmate-mcp. Project-agnostic.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Josh Mullikin",
+    "github": "joshmullikin"
+  },
+  "homepage": "https://github.com/joshmullikin/checkmate-bdd-plugin",
+  "repository": "https://github.com/joshmullikin/checkmate-bdd-plugin",
+  "license": "MIT",
+  "keywords": [
+    "bdd",
+    "e2e",
+    "testing",
+    "checkmate",
+    "playwright",
+    "utml"
+  ]
+}
