@@ -1,0 +1,18 @@
+{
+  "base_url": "http://localhost:3000",
+  "stack": {
+    "start_command": "npm start",
+    "ready_url": "http://localhost:3000/health",
+    "ready_timeout_secs": 30
+  },
+  "services": {
+    "prefer_docker": true
+  },
+  "bdd": {
+    "verification_mode": "required"
+  },
+  "checkmate": {
+    "project_name": "my-project",
+    "url": "http://127.0.0.1:8000"
+  }
+}
