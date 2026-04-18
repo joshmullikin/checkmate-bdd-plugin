@@ -1,0 +1,28 @@
+{
+  "description": "checkmate-bdd-plugin hooks: auto-register scenarios on write; verify BDD runs before stop",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/hooks/register-scenario.py",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/hooks/check-verification.py",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
