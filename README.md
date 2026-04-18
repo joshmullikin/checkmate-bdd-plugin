@@ -1,12 +1,14 @@
 # checkmate-bdd-plugin
 
-A Claude Code plugin for BDD scenario authoring and E2E testing. Project-agnostic — works with any web application, any language, any framework.
+A coding agent plugin for BDD scenario authoring and E2E testing. Project-agnostic — works with any web application, any language, any framework.
 
-All AI work runs **inline in Claude** using the upstream backend's own prompts and Pydantic schemas. No OpenAI API key. No separate AI service. No prompt drift.
+All AI work runs **inline in your coding agent** using the upstream backend's own prompts and Pydantic schemas. No OpenAI API key. No separate AI service. No prompt drift.
+
+Works natively with Claude Code. Also supports GitHub Copilot, Gemini CLI, OpenAI Codex, and other agents via shared instruction files.
 
 ## How it works
 
-The plugin owns three services — [checkmate](https://github.com/ksankaran/checkmate), [playwright-http](https://github.com/ksankaran/playwright-http), and [checkmate-mcp](https://github.com/ksankaran/checkmate-mcp) — and replaces every OpenAI-dependent feature in those services with a Claude skill that reads the backend's own source at runtime.
+The plugin owns three services — [checkmate](https://github.com/ksankaran/checkmate), [playwright-http](https://github.com/ksankaran/playwright-http), and [checkmate-mcp](https://github.com/ksankaran/checkmate-mcp) — and replaces every OpenAI-dependent feature in those services with an agent skill that reads the backend's own source at runtime.
 
 ```
 Your app (native)
@@ -15,7 +17,7 @@ checkmate :8000  ←  playwright-http :8932
      ↑
 checkmate-mcp :3003
      ↑
-Claude Code (all AI runs here, reads upstream source from ~/.checkmate-bdd/)
+your coding agent (all AI runs here, reads upstream source from ~/.checkmate-bdd/)
 ```
 
 Your application always runs natively. The plugin starts it via `stack.start_command` in your config and never containerizes it.
@@ -24,13 +26,13 @@ Your application always runs natively. The plugin starts it via `stack.start_com
 
 | Skill | Trigger | What it does |
 |-------|---------|--------------|
-| `bdd:setup` | Once per project | Create config, clone upstream deps, verify backend source, register MCP server, append CLAUDE.md snippet |
+| `bdd:setup` | Once per project | Create config, clone upstream deps, verify backend source, register MCP server, append agent instruction snippet |
 | `bdd:stack` | `up` / `down` / `status` | Start/stop checkmate + playwright-http + checkmate-mcp + your app. Pulls latest backend source on `up`. |
 | `bdd:write` | Before implementing a feature | Natural language → UTML scenario. Reads `planner.py` + `builder.py` from upstream source. |
 | `bdd:generate` | Starting a new feature area | Bulk-ideate acceptance scenarios. Reads `generator.py`. Pick which to materialize via `bdd:write`. |
 | `bdd:run` | After implementation | Execute scenarios. On failure: classify → heal → retry (up to `max_retries`). Reads `failure_classifier.py` + `healer.py` + `reporter.py`. |
 | `bdd:record` | Complex UI flows | Record a browser session, refine raw events into clean UTML. Reads `recorder_processor.py` + `recorder.py`. |
-| `bdd:ci` | Once per repo | Generate GitHub Actions workflow. CI uses `run-suite.py` directly — no Claude in the loop. |
+| `bdd:ci` | Once per repo | Generate GitHub Actions workflow. CI uses `run-suite.py` directly — no external agent in the loop. |
 
 ## Slash commands
 
@@ -49,7 +51,7 @@ Your application always runs natively. The plugin starts it via `stack.start_com
 | Hook | Event | Behavior |
 |------|-------|----------|
 | `register-scenario` | `PostToolUse/Write` | Auto-registers any file written to `tests/e2e/scenarios/` in checkmate (if stack is running) |
-| `check-verification` | `Stop` | If `verification_mode: required` and checkmate is running, blocks Claude from finishing until `bdd:run all` passes |
+| `check-verification` | `Stop` | If `verification_mode: required` and checkmate is running, blocks the agent from finishing until `bdd:run all` passes |
 
 ## Installation
 
@@ -68,17 +70,20 @@ Then initialize in your project:
 claude -p "bdd:setup"
 ```
 
-`bdd:setup` will ask a few questions, clone the upstream service repos to `~/.checkmate-bdd/`, wire the MCP server into `~/.claude/settings.json`, and append usage instructions to `CLAUDE.md` (and `AGENTS.md` / `GEMINI.md` / `.github/copilot-instructions.md` if those files exist).
+`bdd:setup` will ask a few questions, clone the upstream service repos to `~/.checkmate-bdd/`, wire the MCP server into your agent's settings, and append usage instructions to whichever agent instruction files exist in your project (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.github/copilot-instructions.md`).
 
-## Other coding agents
+## Agent support
 
-The plugin works with GitHub Copilot, Gemini CLI, OpenAI Codex, and other agents via symlinked instruction files:
+The plugin ships with symlinked instruction files so every supported agent reads the same content — no duplication:
 
-- `AGENTS.md` → `CLAUDE.md`
-- `GEMINI.md` → `CLAUDE.md`
-- `.github/copilot-instructions.md` → `CLAUDE.md`
+| File | Agent |
+|------|-------|
+| `CLAUDE.md` | Claude Code (canonical source) |
+| `AGENTS.md` | OpenAI Codex and generic agents |
+| `GEMINI.md` | Gemini CLI |
+| `.github/copilot-instructions.md` | GitHub Copilot |
 
-`bdd:setup` appends the same snippet to all agent instruction files found in your project. Skills and templates are the canonical source — no duplication.
+`AGENTS.md`, `GEMINI.md`, and `.github/copilot-instructions.md` are git symlinks pointing to `CLAUDE.md`. `bdd:setup` replicates the same pattern in your project.
 
 ## Typical workflow
 
@@ -124,7 +129,7 @@ In CI, steps 2–6 run headlessly via the generated GitHub Actions workflow.
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| `bdd.verification_mode` | `required` | `required` blocks Claude from finishing until `bdd:run all` passes; `prompted` is a reminder only |
+| `bdd.verification_mode` | `required` | `required` blocks the agent from finishing until `bdd:run all` passes; `prompted` is a reminder only |
 | `bdd.run.max_retries` | `2` | Heal-and-retry attempts on scenario failure |
 | `bdd.heal.auto_apply_threshold` | `0.85` | Auto-apply healed steps if confidence ≥ this; otherwise show diff and ask |
 | `services.prefer_docker` | `true` | Use Docker if available; fall back to native (uv + node) |
@@ -146,11 +151,11 @@ Scenarios are stored as UTML JSON in `tests/e2e/scenarios/<feature-group>/<name>
 }
 ```
 
-Claude generates UTML by reading the upstream backend's action grammar directly — the rules never drift.
+Your agent generates UTML by reading the upstream backend's action grammar directly — the rules never drift.
 
 ## Requirements
 
-- Claude Code
+- A supported coding agent (Claude Code, Gemini CLI, GitHub Copilot, or OpenAI Codex)
 - Docker **or** Python 3.11+ · uv · Node 22+
 - git (for cloning upstream service repos)
 
