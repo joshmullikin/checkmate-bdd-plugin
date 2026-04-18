@@ -1,19 +1,29 @@
+# Requires PLUGIN_DEPS_DIR env var set by bdd:stack (default: ~/.checkmate-bdd)
+# All three upstream repos must be cloned there by scripts/clone-deps.sh first.
+
 services:
   checkmate:
-    image: ghcr.io/ksankaran/checkmate:latest
+    build:
+      context: ${PLUGIN_DEPS_DIR}/checkmate
+      dockerfile: Dockerfile
     ports:
       - "8000:8000"
     environment:
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-changeme-replace-in-production}
+      PLAYWRIGHT_EXECUTOR_URL: http://playwright-http:8932
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 5s
       timeout: 3s
       retries: 12
+    depends_on:
+      playwright-http:
+        condition: service_healthy
 
   playwright-http:
-    image: ghcr.io/ksankaran/playwright-http:latest
+    build:
+      context: ${PLUGIN_DEPS_DIR}/playwright-http
+      dockerfile: Dockerfile
     ports:
       - "8932:8932"
     healthcheck:
@@ -23,12 +33,14 @@ services:
       retries: 12
 
   checkmate-mcp:
-    image: ghcr.io/joshmullikin/checkmate-mcp:latest
+    build:
+      context: ${PLUGIN_DEPS_DIR}/checkmate-mcp
+      dockerfile: Dockerfile
     ports:
       - "3003:3003"
     environment:
       CHECKMATE_URL: http://checkmate:8000
-      PORT: 3003
+      PORT: "3003"
     depends_on:
       checkmate:
         condition: service_healthy
