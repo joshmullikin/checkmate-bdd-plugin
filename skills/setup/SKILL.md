@@ -139,11 +139,26 @@ Read `~/.claude/settings.json`. Merge the following under `mcpServers` (do not o
 
 Write the merged file back.
 
-## Step 11: Append BDD section to CLAUDE.md
+## Step 11: Append BDD section to agent instruction files
 
-Read `<PLUGIN_ROOT>/templates/claude-md-snippet.md`. Ask: "Append the BDD testing section to CLAUDE.md? [Y/n]"
+Read `<PLUGIN_ROOT>/templates/claude-md-snippet.md`. This is the canonical snippet.
 
-If yes: append the template content to `CLAUDE.md`.
+For each agent instruction file found in the repo root, ask once:
+"Append the BDD testing section to agent instruction files? [Y/n]"
+
+If yes, append the canonical snippet to every file that exists:
+
+| File | Agent platform |
+|---|---|
+| `CLAUDE.md` | Claude Code |
+| `AGENTS.md` | OpenAI Codex / generic agents |
+| `GEMINI.md` | Gemini CLI |
+| `.github/copilot-instructions.md` | GitHub Copilot |
+
+Create any missing files only if the user confirms ("Also create AGENTS.md? [Y/n]").
+Do not create files for platforms the user is not using.
+
+The same snippet content goes into every file — no platform-specific variants needed.
 
 ## Step 12: Confirm completion
 
