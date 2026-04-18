@@ -1,37 +1,158 @@
 ---
 name: bdd:setup
-description: Use when initializing BDD E2E testing in a project for the first time, or when re-configuring the test stack. Creates tests/e2e/checkmate.config.json, installs service dependencies, and wires into CLAUDE.md.
+description: Use when initializing BDD E2E testing in a project for the first time, or re-configuring. Creates tests/e2e/checkmate.config.json, clones service dependencies, and wires into CLAUDE.md. Idempotent — safe to re-run.
 ---
 
 # bdd:setup
 
-One-time initialization of the BDD test stack for a consuming project.
+One-time initialization of the BDD test stack. Idempotent — safe to re-run.
 
-## Steps
+## Step 1: Resolve plugin root
 
-1. Check for `tests/e2e/checkmate.config.json`. If missing, ask:
-   - Base URL of the application under test (e.g. `http://localhost:7792`)
-   - Shell command to start the application (e.g. `cargo run --manifest-path core/Cargo.toml`)
-   - Health/ready URL to poll (e.g. `http://localhost:7792/api/health`)
-   - Ready timeout in seconds (default: 30)
+Find the absolute path to the plugin's installed directory. Run:
 
-2. Ask: "Should BDD scenario results be **required** to pass before marking implementation complete, or just **prompted** as a reminder?"
-   - Write the answer as `bdd.verification_mode` (`required` or `prompted`) in config.
+```bash
+claude plugin list
+```
 
-3. Detect Docker: run `docker info` (suppress output). If available and user doesn't object, set `services.prefer_docker: true`.
+Look for `checkmate-bdd` in the output and note its installed path. Store as `PLUGIN_ROOT`.
 
-4. Write `tests/e2e/checkmate.config.json` using the schema from the design spec.
+If the command is unavailable, resolve manually: this SKILL.md is at `<PLUGIN_ROOT>/skills/setup/SKILL.md`. The plugin root is two directories up.
 
-5. Check dependencies:
-   - If Docker: confirm `docker compose` is available.
-   - If native: check Python 3.11+ (`python --version`), uv (`uv --version`), Node 22+ (`node --version`). Print install instructions for anything missing.
+## Step 2: Check for existing config
 
-6. If native: run `npm install` in the checkmate-mcp directory (from plugin install path).
+Look for `tests/e2e/checkmate.config.json` in the current repo root.
 
-7. Offer to append the BDD section to `CLAUDE.md` from `templates/claude-md-snippet.md`. Apply if user agrees.
+If it exists, read it and offer to update specific fields. Skip to Step 4 for fields already present.
 
-8. Create `tests/e2e/scenarios/` directory if it doesn't exist.
+## Step 3: Collect config values (if no existing config)
 
-9. Remind user: run `bdd:stack up` to start services before writing or running scenarios.
+Ask the following questions **one at a time**:
 
-**Idempotent** — re-running updates config values without destroying existing scenarios.
+1. "What is the base URL of your application? (e.g. http://localhost:3000)"
+2. "What shell command starts your application? (e.g. npm start)"
+3. "What URL should I poll to know your app is ready? (e.g. http://localhost:3000/health) — press enter to skip"
+4. "How many seconds to wait for the app to be ready? [default: 30]"
+5. "Should BDD scenario results be **required** to pass before marking implementation complete (`required`), or just a reminder (`prompted`)? [required/prompted, default: required]"
+
+## Step 4: Check Docker availability
+
+```bash
+docker info > /dev/null 2>&1
+```
+
+- Exit 0: ask "Docker is available — run services as containers? [Y/n]"
+- Exit non-0: services will run natively. Note this.
+
+## Step 5: Write tests/e2e/checkmate.config.json
+
+Create `tests/e2e/` directory if absent:
+
+```bash
+mkdir -p tests/e2e tests/e2e/scenarios
+```
+
+Write `tests/e2e/checkmate.config.json`:
+
+```json
+{
+  "base_url": "<user answer>",
+  "plugin_root": "<PLUGIN_ROOT>",
+  "stack": {
+    "start_command": "<user answer>",
+    "ready_url": "<user answer or omit if skipped>",
+    "ready_timeout_secs": <user answer or 30>
+  },
+  "services": {
+    "prefer_docker": <true if Docker available and user said yes, else false>
+  },
+  "bdd": {
+    "verification_mode": "<required or prompted>",
+    "run": { "max_retries": 2 },
+    "heal": { "auto_apply_threshold": 0.85 }
+  },
+  "checkmate": {
+    "project_name": "<name of the current directory>",
+    "url": "http://127.0.0.1:8000"
+  }
+}
+```
+
+## Step 6: Clone upstream service repos
+
+```bash
+bash <PLUGIN_ROOT>/scripts/clone-deps.sh
+```
+
+This clones checkmate, playwright-http, and checkmate-mcp to `~/.checkmate-bdd/`. Takes 1–2 minutes on first run; fast on subsequent runs.
+
+## Step 7: Verify backend source readable
+
+```bash
+ls ~/.checkmate-bdd/checkmate/agent/nodes/builder.py
+ls ~/.checkmate-bdd/checkmate/agent/nodes/healer.py
+ls ~/.checkmate-bdd/checkmate/agent/nodes/recorder_processor.py
+```
+
+All three must exist. If any are missing, run Step 6 again. If the directory is still wrong, check `scripts/clone-deps.sh` output for errors.
+
+## Step 8: Check native dependencies
+
+Run and print missing-install instructions for anything absent:
+
+```bash
+python3 --version    # need 3.11+
+uv --version         # install: pip install uv
+node --version       # need 22+
+git --version        # need any version
+```
+
+If native mode (not Docker): also install playwright browsers after clone:
+
+```bash
+cd ~/.checkmate-bdd/playwright-http && uv run playwright install chromium
+```
+
+## Step 9: Build Docker images (Docker mode only)
+
+```bash
+PLUGIN_DEPS_DIR=~/.checkmate-bdd \
+docker compose -f <PLUGIN_ROOT>/docker/docker-compose.yml build
+```
+
+Takes several minutes on first run. Images are cached after that.
+
+## Step 10: Register checkmate-mcp as a Claude Code MCP server
+
+Read `~/.claude/settings.json`. Merge the following under `mcpServers` (do not overwrite existing entries):
+
+```json
+{
+  "mcpServers": {
+    "checkmate": {
+      "type": "http",
+      "url": "http://127.0.0.1:3003/mcp"
+    }
+  }
+}
+```
+
+Write the merged file back.
+
+## Step 11: Append BDD section to CLAUDE.md
+
+Read `<PLUGIN_ROOT>/templates/claude-md-snippet.md`. Ask: "Append the BDD testing section to CLAUDE.md? [Y/n]"
+
+If yes: append the template content to `CLAUDE.md`.
+
+## Step 12: Confirm completion
+
+Print:
+```
+✓ BDD setup complete.
+
+Next steps:
+  1. Run `bdd:stack up` to start the test services.
+  2. Run `bdd:generate` or `bdd:write` to author your first scenario.
+  3. Run `bdd:run all` to execute scenarios.
+```
