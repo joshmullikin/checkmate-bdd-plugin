@@ -1,62 +1,37 @@
 ---
 name: bdd:ci
-description: Use to generate a GitHub Actions workflow for running BDD scenarios in CI. Outputs YAML to copy into .github/workflows/bdd.yml.
+description: Use to generate a GitHub Actions workflow for running BDD scenarios in CI. Emits YAML for you to copy into .github/workflows/bdd.yml. No API key required — CI uses run-suite.py directly.
 ---
 
 # bdd:ci
 
-Emits a GitHub Actions workflow YAML parameterized from `checkmate.config.json`. The consuming repo copies this file in — the plugin does not modify `.github/` directly.
+Generate a GitHub Actions workflow from `tests/e2e/checkmate.config.json`.
 
-## Steps
+## Step 1: Read config
 
-1. Read `tests/e2e/checkmate.config.json`. If missing, instruct user to run `bdd:setup` first.
-2. Render `templates/ci-workflow.yml` substituting project-specific values.
-3. Print the rendered YAML.
-4. Tell the user: "Copy this to `.github/workflows/bdd.yml` in your repo."
+Load `tests/e2e/checkmate.config.json`. If missing, run `bdd:setup` first.
 
-## Generated workflow structure
+Extract:
+- `stack.start_command` → `{{START_COMMAND}}`
+- `stack.ready_url` → `{{READY_URL}}`
+- `stack.ready_timeout_secs` → `{{READY_TIMEOUT}}`
+- `checkmate.project_name` → `{{PROJECT_NAME}}`
+- `plugin_root` → `{{PLUGIN_ROOT}}`
 
-```yaml
-name: BDD E2E Tests
+## Step 2: Render workflow
 
-on:
-  push:
-    branches: [master, main]
-  pull_request:
-    branches: [master, main]
+Read `<plugin_root>/templates/ci-workflow.yml`. Substitute all `{{...}}` placeholders with the values above.
 
-jobs:
-  bdd:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+## Step 3: Output
 
-      - name: Install plugin dependencies
-        run: |
-          # checkmate-mcp (Node)
-          npm install --prefix <plugin-root>
-          # playwright browsers
-          pip install uv
-          uv run playwright install chromium
+Print the rendered YAML in a code block, then print:
 
-      - name: Start BDD stack
-        run: claude -p "bdd:stack up"
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}   # optional
-
-      - name: Run scenarios
-        run: claude -p "bdd:run all"
-
-      - name: Stop BDD stack
-        if: always()
-        run: claude -p "bdd:stack down"
-
-      - name: Upload failure screenshots
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: bdd-screenshots
-          path: tests/e2e/screenshots/
 ```
+Copy this to .github/workflows/bdd.yml in your repo.
 
-Note: The workflow uses Docker (available on GitHub-hosted runners). `services.prefer_docker` is always treated as `true` in CI regardless of local config.
+CI notes:
+- ENCRYPTION_KEY should be set as a GitHub secret (any random string works).
+- OPENAI_API_KEY is NOT needed — this plugin uses Claude for all AI work.
+- The workflow uses Docker (available on GitHub-hosted ubuntu-latest runners).
+- Docker image builds are cached between runs via GitHub Actions cache.
+```

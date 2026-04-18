@@ -1,9 +1,7 @@
 # templates/ci-workflow.yml
-# Copy to .github/workflows/bdd.yml in your repo.
-# Replace {{START_COMMAND}}, {{READY_URL}}, {{READY_TIMEOUT}}, {{PROJECT_NAME}}
-# before copying, or use `bdd:ci` to have Claude render them for you.
+# Copy to .github/workflows/bdd.yml. Substitute {{...}} before copying, or use `bdd:ci` to generate.
 
-name: BDD E2E Tests ({{PROJECT_NAME}})
+name: BDD E2E Tests — {{PROJECT_NAME}}
 
 on:
   push:
@@ -13,6 +11,7 @@ on:
 
 env:
   PLUGIN_DEPS_DIR: /home/runner/.checkmate-bdd
+  PLUGIN_PATH: ${{ github.workspace }}/.claude/plugins/checkmate-bdd
 
 jobs:
   bdd:
@@ -22,46 +21,41 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Clone BDD service dependencies
-        run: |
-          bash ${{ github.workspace }}/.claude/plugins/checkmate-bdd/scripts/clone-deps.sh
+        run: bash ${{ env.PLUGIN_PATH }}/scripts/clone-deps.sh
+
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: bdd-docker-${{ runner.os }}-${{ hashFiles('~/.checkmate-bdd/**/*.py', '~/.checkmate-bdd/**/*.ts') }}
+          restore-keys: bdd-docker-${{ runner.os }}-
 
       - name: Build and start BDD stack
         run: |
-          PLUGIN_DEPS_DIR=${{ env.PLUGIN_DEPS_DIR }} \
-          docker compose \
-            -f ${{ github.workspace }}/.claude/plugins/checkmate-bdd/docker/docker-compose.yml \
-            up -d --build
+          PLUGIN_DEPS_DIR=${{ env.PLUGIN_DEPS_DIR }} \n          docker compose \n            -f ${{ env.PLUGIN_PATH }}/docker/docker-compose.yml \n            up -d --build
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ENCRYPTION_KEY: ${{ secrets.BDD_ENCRYPTION_KEY }}
 
       - name: Wait for services
         run: |
-          bash ${{ github.workspace }}/.claude/plugins/checkmate-bdd/scripts/wait-for-ready.sh http://127.0.0.1:8000/health 60
-          bash ${{ github.workspace }}/.claude/plugins/checkmate-bdd/scripts/wait-for-ready.sh http://127.0.0.1:8932/health 30
-          bash ${{ github.workspace }}/.claude/plugins/checkmate-bdd/scripts/wait-for-ready.sh http://127.0.0.1:3003/health 30
+          bash ${{ env.PLUGIN_PATH }}/scripts/wait-for-ready.sh http://127.0.0.1:8932/health 60
+          bash ${{ env.PLUGIN_PATH }}/scripts/wait-for-ready.sh http://127.0.0.1:8000/health 60
+          bash ${{ env.PLUGIN_PATH }}/scripts/wait-for-ready.sh http://127.0.0.1:3003/health 30
 
       - name: Start application under test
         run: {{START_COMMAND}} &
 
       - name: Wait for application ready
-        run: |
-          bash ${{ github.workspace }}/.claude/plugins/checkmate-bdd/scripts/wait-for-ready.sh \
-            {{READY_URL}} {{READY_TIMEOUT}}
+        run: bash ${{ env.PLUGIN_PATH }}/scripts/wait-for-ready.sh {{READY_URL}} {{READY_TIMEOUT}}
 
       - name: Run BDD scenarios
         run: |
-          python3 ${{ github.workspace }}/.claude/plugins/checkmate-bdd/scripts/run-suite.py \
-            --config tests/e2e/checkmate.config.json \
-            --scenarios tests/e2e/scenarios/
+          python3 ${{ env.PLUGIN_PATH }}/scripts/run-suite.py \n            --config tests/e2e/checkmate.config.json \n            --scenarios tests/e2e/scenarios/
 
       - name: Stop BDD stack
         if: always()
         run: |
-          PLUGIN_DEPS_DIR=${{ env.PLUGIN_DEPS_DIR }} \
-          docker compose \
-            -f ${{ github.workspace }}/.claude/plugins/checkmate-bdd/docker/docker-compose.yml \
-            down
+          PLUGIN_DEPS_DIR=${{ env.PLUGIN_DEPS_DIR }} \n          docker compose \n            -f ${{ env.PLUGIN_PATH }}/docker/docker-compose.yml \n            down
 
       - name: Upload failure screenshots
         if: failure()
