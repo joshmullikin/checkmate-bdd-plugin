@@ -1,5 +1,6 @@
 {
   "base_url": "http://localhost:3000",
+  "plugin_root": "",
   "stack": {
     "start_command": "npm start",
     "ready_url": "http://localhost:3000/health",
@@ -9,7 +10,13 @@
     "prefer_docker": true
   },
   "bdd": {
-    "verification_mode": "required"
+    "verification_mode": "required",
+    "run": {
+      "max_retries": 2
+    },
+    "heal": {
+      "auto_apply_threshold": 0.85
+    }
   },
   "checkmate": {
     "project_name": "my-project",
