@@ -16,5 +16,6 @@
     "checkmate",
     "playwright",
     "utml"
-  ]
+  ],
+  "skills": "./skills/"
 }
