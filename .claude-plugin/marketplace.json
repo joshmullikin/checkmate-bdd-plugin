@@ -1,0 +1,31 @@
+{
+  "name": "checkmate-bdd-marketplace",
+  "owner": {
+    "name": "Josh Mullikin",
+    "email": "shuamullikin@gmail.com"
+  },
+  "metadata": {
+    "description": "BDD E2E testing plugins for Claude Code — zero API keys required",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "checkmate-bdd",
+      "description": "BDD scenario authoring and E2E testing via checkmate + playwright-http. Project-agnostic.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Josh Mullikin"
+      },
+      "source": {
+        "source": "github",
+        "repo": "joshmullikin/checkmate-bdd-plugin"
+      },
+      "category": "testing",
+      "tags": ["bdd", "e2e", "testing", "playwright"],
+      "keywords": ["bdd", "e2e", "testing", "checkmate", "playwright", "utml"],
+      "homepage": "https://github.com/joshmullikin/checkmate-bdd-plugin",
+      "repository": "https://github.com/joshmullikin/checkmate-bdd-plugin",
+      "license": "MIT"
+    }
+  ]
+}
