@@ -113,14 +113,18 @@ If native mode (not Docker): also install playwright browsers after clone:
 cd ~/.checkmate-bdd/playwright-http && uv run playwright install chromium
 ```
 
-## Step 9: Build Docker images (Docker mode only)
+## Step 9: Pull/build Docker images (Docker mode only)
+
+Pull the registry images and build checkmate-mcp from source:
 
 ```bash
+docker pull ghcr.io/joshmullikin/checkmate:latest
+docker pull ghcr.io/joshmullikin/playwright-http:latest
 PLUGIN_DEPS_DIR=~/.checkmate-bdd \
-docker compose -f <PLUGIN_ROOT>/docker/docker-compose.yml build
+docker compose -f <PLUGIN_ROOT>/docker/docker-compose.yml build checkmate-mcp
 ```
 
-Takes several minutes on first run. Images are cached after that.
+The pulls are fast. The checkmate-mcp build takes 1–2 minutes on first run and is cached after that.
 
 ## Step 10: Register checkmate-mcp as a Claude Code MCP server
 

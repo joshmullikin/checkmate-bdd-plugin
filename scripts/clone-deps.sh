@@ -22,9 +22,9 @@ clone_or_pull() {
   fi
 }
 
-clone_or_pull "ksankaran/checkmate"       "checkmate"
-clone_or_pull "ksankaran/playwright-http" "playwright-http"
-clone_or_pull "ksankaran/checkmate-mcp"   "checkmate-mcp"
+clone_or_pull "joshmullikin/checkmate"       "checkmate"
+clone_or_pull "joshmullikin/playwright-http" "playwright-http"
+clone_or_pull "ksankaran/checkmate-mcp"      "checkmate-mcp"
 
 echo ""
 echo "All dependencies ready at ${DEPS_DIR}"

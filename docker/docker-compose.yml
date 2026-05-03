@@ -1,11 +1,10 @@
-# Requires PLUGIN_DEPS_DIR env var set by bdd:stack (default: ~/.checkmate-bdd)
-# All three upstream repos must be cloned there by scripts/clone-deps.sh first.
+# PLUGIN_DEPS_DIR is set by bdd:stack (default: ~/.checkmate-bdd)
+# checkmate-mcp is built from source cloned by scripts/clone-deps.sh.
+# checkmate and playwright-http are pulled from ghcr.io/joshmullikin/.
 
 services:
   checkmate:
-    build:
-      context: ${PLUGIN_DEPS_DIR}/checkmate
-      dockerfile: Dockerfile
+    image: ghcr.io/joshmullikin/checkmate:latest
     ports:
       - "8000:8000"
     environment:
@@ -21,9 +20,7 @@ services:
         condition: service_healthy
 
   playwright-http:
-    build:
-      context: ${PLUGIN_DEPS_DIR}/playwright-http
-      dockerfile: Dockerfile
+    image: ghcr.io/joshmullikin/playwright-http:latest
     ports:
       - "8932:8932"
     healthcheck:
