@@ -9,11 +9,6 @@ services:
     environment:
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-changeme-replace-in-production}
       PLAYWRIGHT_EXECUTOR_URL: http://playwright-http:8932
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 5s
-      timeout: 3s
-      retries: 12
     depends_on:
       playwright-http:
         condition: service_healthy
@@ -22,11 +17,6 @@ services:
     image: ghcr.io/joshmullikin/playwright-http:latest
     ports:
       - "8932:8932"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8932/health"]
-      interval: 5s
-      timeout: 3s
-      retries: 12
 
   checkmate-mcp:
     image: ghcr.io/joshmullikin/checkmate-mcp:latest
@@ -38,8 +28,3 @@ services:
     depends_on:
       checkmate:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3003/health"]
-      interval: 5s
-      timeout: 3s
-      retries: 12
