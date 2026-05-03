@@ -1,6 +1,5 @@
-# PLUGIN_DEPS_DIR is set by bdd:stack (default: ~/.checkmate-bdd)
-# checkmate-mcp is built from source cloned by scripts/clone-deps.sh.
-# checkmate and playwright-http are pulled from ghcr.io/joshmullikin/.
+# All three services pulled from ghcr.io/joshmullikin/.
+# PLUGIN_DEPS_DIR is still set by bdd:stack but only needed for backend source reads.
 
 services:
   checkmate:
@@ -30,9 +29,7 @@ services:
       retries: 12
 
   checkmate-mcp:
-    build:
-      context: ${PLUGIN_DEPS_DIR}/checkmate-mcp
-      dockerfile: Dockerfile
+    image: ghcr.io/joshmullikin/checkmate-mcp:latest
     ports:
       - "3003:3003"
     environment:
